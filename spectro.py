@@ -33,7 +33,9 @@ def get_fft():
         while len(l)<fft_size/periodsize:
             l.append(get_more_audio())
         ts = np.concatenate(l)
-        f = np.fft.rfft(ts)
+        # Hamming window
+        f = np.fft.rfft(ts*
+                (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))))
         yield f
         l = l[step_periods:]
 
@@ -66,8 +68,9 @@ if __name__=='__main__':
     setup_audio()
     pygame.init()
     screen = pygame.display.set_mode((768,512), pygame.RESIZABLE)
-    markers = [180., 220.]
-    W = Waterfall((768,512), markers=markers)
+    markers = [175., 220.]
+    top_freq = 1375.
+    W = Waterfall((768,512), markers=markers, top_freq=top_freq)
     pygame.display.set_caption("spectroscope")
     clock = pygame.time.Clock()
     for f in get_fft():
@@ -77,7 +80,7 @@ if __name__=='__main__':
                 sys.exit()
             elif event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode((event.w,event.h), pygame.RESIZABLE)
-                W = Waterfall((event.w, event.h), markers=markers)
+                W = Waterfall((event.w, event.h), markers=markers, top_freq=top_freq)
         screen.fill((0,0,0))
         fa = np.abs(f)
 
