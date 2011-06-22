@@ -6,7 +6,7 @@ import pygame.surfarray as surfarray
 from pygame import Surface, Rect
 from pygame.transform import smoothscale
 import numpy as np
-import alsaaudio
+import pyaudio
 
 inp = None
 fft_size = 8192
@@ -14,17 +14,17 @@ periodsize = 128
 step_periods = 8
 
 def setup_audio():
-    card = 'default'
     global inp
-    inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, 0, card)
-    inp.setchannels(1)
-    inp.setrate(44100)
-    inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
-    inp.setperiodsize(periodsize)
+    inp = pyaudio.PyAudio().open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=48000,
+            input=True,
+            frames_per_buffer=periodsize,
+            )
 
 def get_more_audio():
-    l, data = inp.read()
-    data = np.fromstring(data, dtype=np.int16)
+    data = np.fromstring(inp.read(periodsize), dtype=np.int16)
     return data
 
 def get_fft():
