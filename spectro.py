@@ -47,19 +47,26 @@ class Waterfall:
         self.markers = markers
         self.top_freq = top_freq
         self.sample_rate=sample_rate
+        self.peak = 0.
 
     def add_spectrum(self, f):
         self.surface.scroll(dx=-1)
         draw_area = Surface((1,len(f)),depth=24)
         d = surfarray.pixels3d(draw_area)
-        a = (255*f/np.amax(f)).astype(np.uint8)
+        self.peak = max(np.amax(f),self.peak)
+        a = (255*f/self.peak).astype(np.uint8)
         d[0,:,:] = a[::-1,np.newaxis]
         for m in self.markers:
             im = int((2*m/self.sample_rate)*len(f))
             d[0,-im,0] = 255
         del d
         it = int((2*self.top_freq/self.sample_rate)*len(f))
-        self.surface.blit(smoothscale(draw_area.subsurface((0,len(f)-it-1,1,it)), (1,self.size[1])),(self.size[0]-1,0))
+        self.surface.blit(
+                smoothscale(
+                    draw_area.subsurface((0,len(f)-it-1,1,it)), 
+                    (1,self.size[1])),
+                (self.size[0]-1,0))
+        self.peak *= 2.**(-1./100)
 
 
 
@@ -79,10 +86,11 @@ if __name__=='__main__':
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.VIDEORESIZE:
-                screen = pygame.display.set_mode((event.w,event.h), pygame.RESIZABLE)
-                W = Waterfall((event.w, event.h), markers=markers, top_freq=top_freq)
-        screen.fill((0,0,0))
-        fa = np.abs(f)
+                screen = pygame.display.set_mode((event.w,event.h), 
+                        pygame.RESIZABLE)
+                W = Waterfall((event.w, event.h), 
+                        markers=markers, top_freq=top_freq)
+        fa = np.sqrt(np.abs(f))
 
         W.add_spectrum(fa)
         screen.blit(W.surface,(0,0))
