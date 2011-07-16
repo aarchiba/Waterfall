@@ -55,11 +55,15 @@ def get_fft():
         while len(audio_buffer)<fft_size/period_size:
             time.sleep(0.01)
         ts = np.concatenate(audio_buffer[:fft_size/period_size])
-        ts -= np.mean(ts)
-        # Hamming window
-        f = np.fft.rfft(ts*
-                (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))[...,np.newaxis]),
-                axis=0)
+        #ts -= np.mean(ts)
+        if True:
+            # Hamming window
+            f = np.fft.rfft(ts*
+                    (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))[...,np.newaxis]),
+                    axis=0)
+        else:
+            f = np.fft.rfft(ts, axis=0)
+
         yield f
         audio_buffer = audio_buffer[step_periods:]
         if len(audio_buffer)>2*fft_size/period_size:
@@ -116,6 +120,7 @@ if __name__=='__main__':
     initial_size = (768,512)
     screen = pygame.display.set_mode(initial_size, pygame.RESIZABLE)
     markers = [175., 220.]
+    #markers = [100., 200., 300., 400., 500.]
     top_freq = 1375.
     W = Waterfall(initial_size, markers=markers, top_freq=top_freq)
     pygame.display.set_caption("spectroscope")
