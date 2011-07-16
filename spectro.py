@@ -17,7 +17,7 @@ def setup_audio():
     global inp
     inp = pyaudio.PyAudio().open(
             format=pyaudio.paInt16,
-            channels=1,
+            channels=2,
             rate=48000,
             input=True,
             frames_per_buffer=periodsize,
@@ -25,7 +25,7 @@ def setup_audio():
 
 def get_more_audio():
     data = np.fromstring(inp.read(periodsize), dtype=np.int16)
-    return data
+    return data.reshape((-1,2))
 
 def get_fft():
     l = []
@@ -35,7 +35,8 @@ def get_fft():
         ts = np.concatenate(l)
         # Hamming window
         f = np.fft.rfft(ts*
-                (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))))
+                (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))[...,np.newaxis]),
+                axis=0)
         yield f
         l = l[step_periods:]
 
@@ -55,7 +56,8 @@ class Waterfall:
         d = surfarray.pixels3d(draw_area)
         self.peak = max(np.amax(f),self.peak)
         a = (255*f/self.peak).astype(np.uint8)
-        d[0,:,:] = a[::-1,np.newaxis]
+        d[0,:,1:] = a[::-1]
+        d[0,:,0] = (a[::-1,1]/2+a[::-1,0]/2)
         for m in self.markers:
             im = int((2*m/self.sample_rate)*len(f))
             d[0,-im,0] = 255
