@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys, time, threading
 
 import pygame
 import pygame.surfarray as surfarray
@@ -10,8 +10,18 @@ import pyaudio
 
 inp = None
 fft_size = 8192
-period_size = 1024
-step_periods = 1
+period_size = 128
+step_periods = 8
+
+def get_more_audio():
+    data = np.fromstring(inp.read(period_size), dtype=np.float32)
+    return data.reshape((-1,2))
+
+audio_buffer = []
+def audio_slurp():
+    global audio_buffer
+    while audio_buffer is not None:
+        audio_buffer.append(get_more_audio())
 
 def setup_audio():
     # initialization opens all host APIs
@@ -37,24 +47,24 @@ def setup_audio():
                 input=True,
                 frames_per_buffer=period_size,
                 )
-
-def get_more_audio():
-    data = np.fromstring(inp.read(period_size), dtype=np.float32)
-    return data.reshape((-1,2))
+    threading.Thread(target=audio_slurp).start()
 
 def get_fft():
-    l = []
+    global audio_buffer
     while True:
-        while len(l)<fft_size/period_size:
-            l.append(get_more_audio())
-        ts = np.concatenate(l)
-        # Hamming window
+        while len(audio_buffer)<fft_size/period_size:
+            time.sleep(0.01)
+        ts = np.concatenate(audio_buffer[:fft_size/period_size])
         ts -= np.mean(ts)
+        # Hamming window
         f = np.fft.rfft(ts*
                 (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))[...,np.newaxis]),
                 axis=0)
         yield f
-        l = l[step_periods:]
+        audio_buffer = audio_buffer[step_periods:]
+        if len(audio_buffer)>2*fft_size/period_size:
+            print "Can't keep up, skipping ahead"
+            audio_buffer = audio_buffer[-(fft_size/period_size):]
 
 class Waterfall:
     def __init__(self, size, top_freq=1000., markers=[], sample_rate=48000.):
@@ -112,6 +122,7 @@ if __name__=='__main__':
     for f in get_fft():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                audio_buffer = None
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.VIDEORESIZE:
