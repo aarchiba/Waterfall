@@ -14,17 +14,32 @@ periodsize = 128
 step_periods = 8
 
 def setup_audio():
+    # initialization opens all host APIs
+    A = pyaudio.PyAudio()
+    # use JACK if available, else whatever is the default
     global inp
-    inp = pyaudio.PyAudio().open(
-            format=pyaudio.paInt16,
-            channels=2,
-            rate=48000,
-            input=True,
-            frames_per_buffer=periodsize,
-            )
+    try:
+        d = A.get_host_api_info_by_type(pyaudio.paJACK)
+        print d
+        inp = A.open(
+                format=pyaudio.paFloat32,
+                channels=2,
+                rate=48000,
+                input=True,
+                input_device_index=d['defaultInputDevice'],
+                frames_per_buffer=periodsize,
+                )
+    except IOError:
+        inp = A.open(
+                format=pyaudio.paFloat32,
+                channels=2,
+                rate=48000,
+                input=True,
+                frames_per_buffer=periodsize,
+                )
 
 def get_more_audio():
-    data = np.fromstring(inp.read(periodsize), dtype=np.int16)
+    data = np.fromstring(inp.read(periodsize), dtype=np.float32)
     return data.reshape((-1,2))
 
 def get_fft():
