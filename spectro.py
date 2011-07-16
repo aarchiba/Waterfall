@@ -10,8 +10,8 @@ import pyaudio
 
 inp = None
 fft_size = 8192
-periodsize = 128
-step_periods = 8
+period_size = 1024
+step_periods = 1
 
 def setup_audio():
     # initialization opens all host APIs
@@ -27,7 +27,7 @@ def setup_audio():
                 rate=48000,
                 input=True,
                 input_device_index=d['defaultInputDevice'],
-                frames_per_buffer=periodsize,
+                frames_per_buffer=period_size,
                 )
     except IOError:
         inp = A.open(
@@ -35,20 +35,21 @@ def setup_audio():
                 channels=2,
                 rate=48000,
                 input=True,
-                frames_per_buffer=periodsize,
+                frames_per_buffer=period_size,
                 )
 
 def get_more_audio():
-    data = np.fromstring(inp.read(periodsize), dtype=np.float32)
+    data = np.fromstring(inp.read(period_size), dtype=np.float32)
     return data.reshape((-1,2))
 
 def get_fft():
     l = []
     while True:
-        while len(l)<fft_size/periodsize:
+        while len(l)<fft_size/period_size:
             l.append(get_more_audio())
         ts = np.concatenate(l)
         # Hamming window
+        ts -= np.mean(ts)
         f = np.fft.rfft(ts*
                 (0.54-0.46*np.cos(2*np.pi*np.arange(len(ts))/len(ts))[...,np.newaxis]),
                 axis=0)
@@ -99,8 +100,6 @@ class Waterfall:
             self.draw_spectrum(self.history[-i-1],self.size[0]-i)
 
 
-
-
 if __name__=='__main__':
     setup_audio()
     pygame.init()
@@ -119,7 +118,16 @@ if __name__=='__main__':
                 screen = pygame.display.set_mode((event.w,event.h), 
                         pygame.RESIZABLE)
                 W.resize((event.w, event.h))
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    # Crank up spectral resolution
+                    if fft_size < 65536:
+                        fft_size *= 2
+                elif event.key == pygame.K_DOWN:
+                    if fft_size > period_size:
+                        fft_size /= 2
         fa = np.sqrt(np.abs(f))
+        fa = np.abs(f)
 
         W.add_spectrum(fa)
         screen.blit(W.surface,(0,0))
