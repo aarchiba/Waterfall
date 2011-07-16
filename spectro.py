@@ -113,10 +113,11 @@ class Waterfall:
 if __name__=='__main__':
     setup_audio()
     pygame.init()
-    screen = pygame.display.set_mode((768,512), pygame.RESIZABLE)
+    initial_size = (768,512)
+    screen = pygame.display.set_mode(initial_size, pygame.RESIZABLE)
     markers = [175., 220.]
     top_freq = 1375.
-    W = Waterfall((768,512), markers=markers, top_freq=top_freq)
+    W = Waterfall(initial_size, markers=markers, top_freq=top_freq)
     pygame.display.set_caption("spectroscope")
     clock = pygame.time.Clock()
     for f in get_fft():
@@ -138,7 +139,6 @@ if __name__=='__main__':
                     if fft_size > period_size:
                         fft_size /= 2
         fa = np.sqrt(np.abs(f))
-        fa = np.abs(f)
 
         W.add_spectrum(fa)
         screen.blit(W.surface,(0,0))
