@@ -41,17 +41,16 @@ def get_fft():
         l = l[step_periods:]
 
 class Waterfall:
-    def __init__(self, size, top_freq=1000., markers=[], sample_rate=44100.):
+    def __init__(self, size, top_freq=1000., markers=[], sample_rate=48000.):
         self.size = size
         self.surface = Surface(size)
-        w, h = size
         self.markers = markers
         self.top_freq = top_freq
         self.sample_rate=sample_rate
         self.peak = 0.
+        self.history = []
 
-    def add_spectrum(self, f):
-        self.surface.scroll(dx=-1)
+    def draw_spectrum(self, f, x):
         draw_area = Surface((1,len(f)),depth=24)
         d = surfarray.pixels3d(draw_area)
         self.peak = max(np.amax(f),self.peak)
@@ -67,8 +66,22 @@ class Waterfall:
                 smoothscale(
                     draw_area.subsurface((0,len(f)-it-1,1,it)), 
                     (1,self.size[1])),
-                (self.size[0]-1,0))
+                (x,0))
         self.peak *= 2.**(-1./100)
+
+    def add_spectrum(self, f):
+        self.history.append(f)
+        self.history = self.history[-self.size[0]:]
+        self.surface.scroll(dx=-1)
+        self.draw_spectrum(f,self.size[0]-1)
+
+    def resize(self, size):
+        if size==self.size:
+            return
+        self.size = size
+        self.surface = Surface(size)
+        for i in range(min(len(self.history),self.size[0])):
+            self.draw_spectrum(self.history[-i-1],self.size[0]-i)
 
 
 
@@ -90,8 +103,7 @@ if __name__=='__main__':
             elif event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode((event.w,event.h), 
                         pygame.RESIZABLE)
-                W = Waterfall((event.w, event.h), 
-                        markers=markers, top_freq=top_freq)
+                W.resize((event.w, event.h))
         fa = np.sqrt(np.abs(f))
 
         W.add_spectrum(fa)
