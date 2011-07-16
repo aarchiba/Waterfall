@@ -62,14 +62,14 @@ class Waterfall:
         self.markers = markers
         self.top_freq = top_freq
         self.sample_rate=sample_rate
-        self.peak = 0.
+        self.peak = np.zeros(2)
         self.history = []
 
     def draw_spectrum(self, f, x):
         draw_area = Surface((1,len(f)),depth=24)
         d = surfarray.pixels3d(draw_area)
-        self.peak = max(np.amax(f),self.peak)
-        a = (255*f/self.peak).astype(np.uint8)
+        self.peak = np.maximum(np.amax(f,axis=0),self.peak)
+        a = (255*f/self.peak[np.newaxis,:]).astype(np.uint8)
         d[0,:,1:] = a[::-1]
         d[0,:,0] = (a[::-1,1]/2+a[::-1,0]/2)
         for m in self.markers:
